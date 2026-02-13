@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Crypto Slippage Analyzer</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body { font-family: Arial; background:#111; color:white; padding:20px; }
+input, select, button { margin:5px; padding:6px; }
+canvas { background:#1c1c1c; margin-top:20px; }
+.result { margin-top:15px; }
+</style>
+</head>
+<body>
+
+<h2>Crypto Slippage Analyzer</h2>
+
+<input id="coin" placeholder="coin id (bitcoin)" />
+<input id="order" type="number" placeholder="order size USD" />
+<input id="slip" type="number" placeholder="slippage tolerance %" />
+<input id="days" type="number" placeholder="history days" />
+<select id="vs">
+<option value="usd">USD</option>
+<option value="eur">EUR</option>
+<option value="gbp">GBP</option>
+</select>
+<button onclick="analyze()">Analyze</button>
+
+<div class="result" id="metrics"></div>
+
+<canvas id="priceChart"></canvas>
+<canvas id="slipChart"></canvas>
+
+<script>
+let priceChart;
+let slipChart;
+
+async function analyze() {
+  const coin = document.getElementById("coin").value;
+  const order = parseFloat(document.getElementById("order").value);
+  const slip = parseFloat(document.getElementById("slip").value);
+  const days = parseInt(document.getElementById("days").value);
+  const vs = document.getElementById("vs").value;
+
+  const res = await fetch("http://localhost:5000/api/analyze", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      coin_id: coin,
+      order_usd: order,
+      slippage_tolerance_pct: slip,
+      history_days: days,
+      vs: vs
+    })
+  });
+
+  const data = await res.json();
+  if (data.error) {
+    alert(data.error);
+    return;
+  }
+
+  document.getElementById("metrics").innerHTML = `
+    Live: ${data.live_price}<br>
+    Simulated: ${data.simulated_actual_price}<br>
+    Slippage: ${data.slippage_pct}%<br>
+    Volatility: ${data.volatility_pct}%<br>
+    Liquidity: $${data.liquidity_proxy_usd}<br>
+    Risk: ${data.risk.level} (${data.risk.score})
+  `;
+
+  const labels = data.price_history.map(p => new Date(p.ts).toLocaleDateString());
+  const prices = data.price_history.map(p => p.price);
+
+  if (priceChart) priceChart.destroy();
+  priceChart = new Chart(document.getElementById("priceChart"), {
+    type: "line",
+    data: { labels: labels, datasets: [{ label: "Price", data: prices, borderColor: "#00d1ff" }] }
+  });
+
+  const slipLabels = data.slippage_by_order_size.map(p => p.order_usd);
+  const slipValues = data.slippage_by_order_size.map(p => p.impact_slippage_pct);
+
+  if (slipChart) slipChart.destroy();
+  slipChart = new Chart(document.getElementById("slipChart"), {
+    type: "bar",
+    data: { labels: slipLabels, datasets: [{ label: "Slippage %", data: slipValues, backgroundColor: "#ff3b30" }] }
+  });
+}
+</script>
+
+</body>
+</html>
