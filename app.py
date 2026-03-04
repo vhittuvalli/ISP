@@ -175,8 +175,12 @@ def analyze():
         )
 
         raw_prices = [(int(ts), float(p)) for ts, p in hist.get("prices", [])]
+
+        # compute volatility from full dataset, not downsampling for this
+        vol = compute_volatility_pct(raw_prices)
+
+        # only downsample for chart display
         ds_prices = downsample_prices(raw_prices, max_points)
-        vol = compute_volatility_pct(ds_prices)
 
         if expected_price <= 0:
             expected_price = live_price
