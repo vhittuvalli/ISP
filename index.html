@@ -66,7 +66,8 @@ async function analyze() {
     Slippage: ${data.slippage_pct}%<br>
     Volatility: ${data.volatility_pct}%<br>
     Liquidity: $${data.liquidity_proxy_usd}<br>
-    Risk: ${data.risk.level} (${data.risk.score})
+    Risk: ${data.risk.level} (${data.risk.score})<br>
+    Tolerance Exceeded: ${data.risk.exceeds_tolerance ? "YES" : "NO"}
   `;
 
   const labels = data.price_history.map(p => new Date(p.ts).toLocaleDateString());

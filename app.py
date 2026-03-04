@@ -119,11 +119,10 @@ def market_impact_slippage_pct(order_usd: float, liquidity_usd: float):
     return float(min(impact, 25.0))
 
 
-def risk_score(order_usd: float, liquidity_usd: float, vol_pct: float, slip_tol_pct: float):
+def risk_score(order_usd: float, liquidity_usd: float, vol_pct: float):
     score = 0.0
-    score += min(order_usd / max(liquidity_usd, 1.0), 1.0) * 50.0
-    score += min(vol_pct / 4.0, 1.0) * 30.0
-    score += min(slip_tol_pct / 2.5, 1.0) * 20.0
+    score += min(order_usd / max(liquidity_usd, 1.0), 1.0) * 60.0
+    score += min(vol_pct / 4.0, 1.0) * 40.0
 
     if score >= 70:
         level, color = "High", "#ff3b30"
@@ -188,8 +187,9 @@ def analyze():
         impact_pct = market_impact_slippage_pct(order_usd, liq)
         simulated_actual = live_price * (1.0 + impact_pct / 100.0)
         slippage_pct = abs((simulated_actual - expected_price) / expected_price) * 100.0
+        exceeds_tolerance = slippage_pct > slip_tol
 
-        score, level, color = risk_score(order_usd, liq, vol, slip_tol)
+        score, level, color = risk_score(order_usd, liq, vol)
 
         bars = []
         for m in [0.25, 0.5, 1.0, 2.0, 4.0]:
@@ -202,7 +202,12 @@ def analyze():
             "slippage_pct": round(slippage_pct, 4),
             "volatility_pct": round(vol, 4),
             "liquidity_proxy_usd": round(liq, 2),
-            "risk": {"score": score, "level": level, "color": color},
+            "risk": {
+                "score": score,
+                "level": level,
+                "color": color,
+                "exceeds_tolerance": exceeds_tolerance
+            },
             "price_history": [{"ts": ts, "price": p} for ts, p in ds_prices],
             "slippage_by_order_size": bars
         })
