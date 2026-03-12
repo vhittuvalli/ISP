@@ -36,10 +36,19 @@ let priceChart;
 let slipChart;
 
 async function analyze() {
-  const coin = document.getElementById("coin").value;
-  const order = parseFloat(document.getElementById("order").value);
-  const slip = parseFloat(document.getElementById("slip").value);
-  const days = parseInt(document.getElementById("days").value);
+    const coin = document.getElementById("coin").value || "bitcoin";
+
+  let order = parseFloat(document.getElementById("order").value);
+  if (!order || order <= 0) {
+    alert("Enter a valid order size");
+    return;
+  }
+
+  let slip = parseFloat(document.getElementById("slip").value);
+  if (!slip || slip <= 0) slip = 0.5;
+
+  let days = parseInt(document.getElementById("days").value);
+  if (!days || days < 1) days = 7;
   const vs = document.getElementById("vs").value;
 
   const res = await fetch("http://localhost:5000/api/analyze", {
@@ -66,7 +75,9 @@ async function analyze() {
     Slippage: ${data.slippage_pct}%<br>
     Volatility: ${data.volatility_pct}%<br>
     Liquidity: $${data.liquidity_proxy_usd}<br>
-    Risk: ${data.risk.level} (${data.risk.score})<br>
+    Risk: <span style="color:${data.risk.color}">
+    ${data.risk.level} (${data.risk.score})
+    </span><br>
     Tolerance Exceeded: ${data.risk.exceeds_tolerance ? "YES" : "NO"}
   `;
 
