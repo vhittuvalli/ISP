@@ -24,7 +24,7 @@ canvas { background:#1c1c1c; margin-top:20px; }
 <option value="eur">EUR</option>
 <option value="gbp">GBP</option>
 </select>
-<button onclick="analyze()">Analyze</button>
+<button id="analyzeBtn" onclick="analyze()">Analyze</button>
 
 <div class="result" id="metrics"></div>
 
@@ -36,68 +36,76 @@ let priceChart;
 let slipChart;
 
 async function analyze() {
+  const btn = document.getElementById("analyzeBtn");
+  btn.disabled = true;
+  btn.innerText = "Analyzing...";
+
+  try {
     const coin = document.getElementById("coin").value || "bitcoin";
 
-  let order = parseFloat(document.getElementById("order").value);
-  if (!order || order <= 0) {
-    alert("Enter a valid order size");
-    return;
+    let order = parseFloat(document.getElementById("order").value);
+    if (!order || order <= 0) {
+      alert("Enter a valid order size");
+      return;
+    }
+
+    let slip = parseFloat(document.getElementById("slip").value);
+    if (!slip || slip <= 0) slip = 0.5;
+
+    let days = parseInt(document.getElementById("days").value);
+    if (!days || days < 1) days = 7;
+
+    const vs = document.getElementById("vs").value;
+
+    const res = await fetch("http://localhost:5000/api/analyze", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        coin_id: coin,
+        order_usd: order,
+        slippage_tolerance_pct: slip,
+        history_days: days,
+        vs: vs
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+
+    document.getElementById("metrics").innerHTML = `
+      Live: ${data.live_price}<br>
+      Simulated: ${data.simulated_actual_price}<br>
+      Slippage: ${data.slippage_pct}%<br>
+      Volatility: ${data.volatility_pct}%<br>
+      Liquidity: $${data.liquidity_proxy_usd.toLocaleString()}<br>
+      Risk: <span style="color:${data.risk.color}">${data.risk.level} (${data.risk.score})</span><br>
+      Tolerance Exceeded: ${data.risk.exceeds_tolerance ? "YES" : "NO"}
+    `;
+
+    const labels = data.price_history.map(p => new Date(p.ts).toLocaleDateString());
+    const prices = data.price_history.map(p => p.price);
+
+    if (priceChart) priceChart.destroy();
+    priceChart = new Chart(document.getElementById("priceChart"), {
+      type: "line",
+      data: { labels: labels, datasets: [{ label: "Price", data: prices, borderColor: "#00d1ff" }] }
+    });
+
+    const slipLabels = data.slippage_by_order_size.map(p => p.order_usd);
+    const slipValues = data.slippage_by_order_size.map(p => p.impact_slippage_pct);
+
+    if (slipChart) slipChart.destroy();
+    slipChart = new Chart(document.getElementById("slipChart"), {
+      type: "bar",
+      data: { labels: slipLabels, datasets: [{ label: "Slippage %", data: slipValues, backgroundColor: "#ff3b30" }] }
+    });
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Analyze";
   }
-
-  let slip = parseFloat(document.getElementById("slip").value);
-  if (!slip || slip <= 0) slip = 0.5;
-
-  let days = parseInt(document.getElementById("days").value);
-  if (!days || days < 1) days = 7;
-  const vs = document.getElementById("vs").value;
-
-  const res = await fetch("http://localhost:5000/api/analyze", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      coin_id: coin,
-      order_usd: order,
-      slippage_tolerance_pct: slip,
-      history_days: days,
-      vs: vs
-    })
-  });
-
-  const data = await res.json();
-  if (data.error) {
-    alert(data.error);
-    return;
-  }
-
-  document.getElementById("metrics").innerHTML = `
-    Live: ${data.live_price}<br>
-    Simulated: ${data.simulated_actual_price}<br>
-    Slippage: ${data.slippage_pct}%<br>
-    Volatility: ${data.volatility_pct}%<br>
-    Liquidity: $${data.liquidity_proxy_usd}<br>
-    Risk: <span style="color:${data.risk.color}">
-    ${data.risk.level} (${data.risk.score})
-    </span><br>
-    Tolerance Exceeded: ${data.risk.exceeds_tolerance ? "YES" : "NO"}
-  `;
-
-  const labels = data.price_history.map(p => new Date(p.ts).toLocaleDateString());
-  const prices = data.price_history.map(p => p.price);
-
-  if (priceChart) priceChart.destroy();
-  priceChart = new Chart(document.getElementById("priceChart"), {
-    type: "line",
-    data: { labels: labels, datasets: [{ label: "Price", data: prices, borderColor: "#00d1ff" }] }
-  });
-
-  const slipLabels = data.slippage_by_order_size.map(p => p.order_usd);
-  const slipValues = data.slippage_by_order_size.map(p => p.impact_slippage_pct);
-
-  if (slipChart) slipChart.destroy();
-  slipChart = new Chart(document.getElementById("slipChart"), {
-    type: "bar",
-    data: { labels: slipLabels, datasets: [{ label: "Slippage %", data: slipValues, backgroundColor: "#ff3b30" }] }
-  });
 }
 </script>
 
