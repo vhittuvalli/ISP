@@ -78,12 +78,14 @@ async function analyze() {
     document.getElementById("error").innerText = "";
 
     document.getElementById("metrics").innerHTML = `
-      Live: ${data.live_price}<br>
-      Simulated: ${data.simulated_actual_price}<br>
-      Slippage: ${data.slippage_pct}%<br>
-      Volatility: ${data.volatility_pct}%<br>
+      Live: $${Number(data.live_price).toFixed(2)}<br>
+      Simulated: $${Number(data.simulated_actual_price).toFixed(2)}<br>
+      Slippage: ${Number(data.slippage_pct).toFixed(2)}%<br>
+      Volatility: ${Number(data.volatility_pct).toFixed(2)}%<br>
       Liquidity: $${data.liquidity_proxy_usd.toLocaleString()}<br>
-      Risk: <span style="color:${data.risk.color}">${data.risk.level} (${data.risk.score})</span><br>
+      Risk: <span style="color:${data.risk.color}">
+        ${data.risk.level} (${data.risk.score})
+      </span><br>
       Tolerance Exceeded: ${data.risk.exceeds_tolerance ? "YES" : "NO"}
     `;
 
