@@ -27,6 +27,7 @@ canvas { background:#1c1c1c; margin-top:20px; }
 <button id="analyzeBtn" onclick="analyze()">Analyze</button>
 
 <div class="result" id="metrics"></div>
+<div id="error" style="color:#ff3b30; margin-top:10px;"></div>
 
 <canvas id="priceChart"></canvas>
 <canvas id="slipChart"></canvas>
@@ -45,7 +46,7 @@ async function analyze() {
 
     let order = parseFloat(document.getElementById("order").value);
     if (!order || order <= 0) {
-      alert("Enter a valid order size");
+      document.getElementById("error").innerText = "Enter a valid order size";
       return;
     }
 
@@ -71,9 +72,10 @@ async function analyze() {
 
     const data = await res.json();
     if (data.error) {
-      alert(data.error);
+      document.getElementById("error").innerText = data.error;
       return;
     }
+    document.getElementById("error").innerText = "";
 
     document.getElementById("metrics").innerHTML = `
       Live: ${data.live_price}<br>
